@@ -1,87 +1,95 @@
-# LLM Council
+# LLM Council (Local Edition)
 
 ![llmcouncil](header.jpg)
 
-The idea of this repo is that instead of asking a question to your favorite LLM provider (e.g. OpenAI GPT 5.1, Google Gemini 3.0 Pro, Anthropic Claude Sonnet 4.5, xAI Grok 4, eg.c), you can group them into your "LLM Council". This repo is a simple, local web app that essentially looks like ChatGPT except it uses OpenRouter to send your query to multiple LLMs, it then asks them to review and rank each other's work, and finally a Chairman LLM produces the final response.
+This project is a refactor of the original LLM Council concept. Instead of relying on cloud-based models via OpenRouter, the entire system runs locally using [Ollama](https://ollama.com/). Multiple local LLMs collaborate by answering, reviewing, and synthesizing responses to a user query.
 
-In a bit more detail, here is what happens when you submit a query:
+The council consists of several models that provide initial responses and then rank each other's work. A dedicated Chairman LLM then produces the final synthesized output.
 
-1. **Stage 1: First opinions**. The user query is given to all LLMs individually, and the responses are collected. The individual responses are shown in a "tab view", so that the user can inspect them all one by one.
+## Modifications from the Original Project
+
+- **Local Execution**: Migrated from OpenRouter (Cloud) to Ollama (Local).
+- **Custom Ollama Client**: Implemented a dedicated client in `backend/ollama.py` to handle local model requests.
+- **Setup Refactor**: Simplified the start process to work with standard Python/Conda environments, removing the strict dependency on `uv`.
+
+## How it Works
+
+1. **Stage 1: First opinions**. The user query is sent to all local council models (e.g., Qwen, Mistral, Llama).
 2. **Stage 2: Review**. Each individual LLM is given the responses of the other LLMs. Under the hood, the LLM identities are anonymized so that the LLM can't play favorites when judging their outputs. The LLM is asked to rank them in accuracy and insight.
-3. **Stage 3: Final response**. The designated Chairman of the LLM Council takes all of the model's responses and compiles them into a single final answer that is presented to the user.
+3. **Stage 3: Final response**. The Chairman model (e.g., DeepSeek-R1) synthesizes all responses and peer rankings into a final comprehensive answer.
 
-## Vibe Code Alert
+## Prerequisites
 
-This project was 99% vibe coded as a fun Saturday hack because I wanted to explore and evaluate a number of LLMs side by side in the process of [reading books together with LLMs](https://x.com/karpathy/status/1990577951671509438). It's nice and useful to see multiple responses side by side, and also the cross-opinions of all LLMs on each other's outputs. I'm not going to support it in any way, it's provided here as is for other people's inspiration and I don't intend to improve it. Code is ephemeral now and libraries are over, ask your LLM to change it in whatever way you like.
+- [Ollama](https://ollama.com/) installed and running.
+- Pull the required models:
+  ```bash
+  ollama pull deepseek-r1:1.5b
+  ollama pull qwen3:4b
+  ollama pull mistral:latest
+  ollama pull llama3.2:1b
+  ```
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Backend Setup
 
-The project uses [uv](https://docs.astral.sh/uv/) for project management.
+The project can be run in a Conda environment or using standard Python.
 
-**Backend:**
 ```bash
-uv sync
+# 1. Create and activate environment
+conda create -n llm-council python=3.10
+conda activate llm-council
+
+# 2. Install dependencies
+pip install fastapi uvicorn httpx python-dotenv respx pytest-asyncio
 ```
 
-**Frontend:**
+### 2. Frontend Setup
+
 ```bash
 cd frontend
 npm install
 cd ..
 ```
 
-### 2. Configure API Key
+### 3. Configuration
 
-Create a `.env` file in the project root:
-
-```bash
-OPENROUTER_API_KEY=sk-or-v1-...
-```
-
-Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.
-
-### 3. Configure Models (Optional)
-
-Edit `backend/config.py` to customize the council:
-
-```python
-COUNCIL_MODELS = [
-    "openai/gpt-5.1",
-    "google/gemini-3-pro-preview",
-    "anthropic/claude-sonnet-4.5",
-    "x-ai/grok-4",
-]
-
-CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
-```
+Local models are defined in `backend/config.py`. You can adjust model names or the Ollama API URL (default: `http://localhost:11434/api/chat`).
 
 ## Running the Application
 
-**Option 1: Use the start script**
+**Option 1: Using the Start Script**
 ```bash
 ./start.sh
 ```
 
-**Option 2: Run manually**
+**Option 2: Manual Start**
 
-Terminal 1 (Backend):
+**Terminal 1 (Backend):**
 ```bash
-uv run python -m backend.main
+# Ensure your environment is activated
+python -m backend.main
 ```
 
-Terminal 2 (Frontend):
+**Terminal 2 (Frontend):**
 ```bash
 cd frontend
 npm run dev
 ```
 
-Then open http://localhost:5173 in your browser.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## Running Tests
+
+Verify the integration with:
+```bash
+# Ensure your environment is activated
+python -m pytest backend/tests
+```
 
 ## Tech Stack
 
-- **Backend:** FastAPI (Python 3.10+), async httpx, OpenRouter API
-- **Frontend:** React + Vite, react-markdown for rendering
-- **Storage:** JSON files in `data/conversations/`
-- **Package Management:** uv for Python, npm for JavaScript
+- **Backend:** FastAPI, Ollama (Local API), Httpx
+- **Frontend:** React + Vite, Tailwind CSS
+- **Testing:** Pytest, Respx
+- **Storage:** JSON-based conversation history
