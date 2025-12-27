@@ -12,7 +12,37 @@ import asyncio
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
 
-app = FastAPI(title="LLM Council API")
+import logging
+from contextlib import asynccontextmanager
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("backend.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("backend")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    logger.info("Backend starting up...")
+    try:
+        from .config import COUNCIL_MODELS, CHAIRMAN_MODEL, OLLAMA_API_URL
+        logger.info(f"Ollama API URL: {OLLAMA_API_URL}")
+        logger.info(f"Council Models: {COUNCIL_MODELS}")
+        logger.info(f"Chairman Model: {CHAIRMAN_MODEL}")
+    except Exception as e:
+        logger.error(f"Error during startup config check: {e}")
+    
+    yield
+    # Shutdown logic
+    logger.info("Backend shutting down...")
+
+app = FastAPI(title="LLM Council API", lifespan=lifespan)
 
 # Enable CORS for local development
 app.add_middleware(
@@ -148,26 +178,36 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
             # Stage 1: Collect responses
+            logger.info(f"Stage 1: Collecting responses for query: {request.content[:50]}...")
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
             stage1_results = await stage1_collect_responses(request.content)
+            logger.info(f"Stage 1 complete: {len(stage1_results)} responses collected.")
             yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
             # Stage 2: Collect rankings
+            logger.info("Stage 2: Collecting rankings...")
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
             stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
             aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
+            logger.info(f"Stage 2 complete: {len(stage2_results)} rankings collected.")
             yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
 
             # Stage 3: Synthesize final answer
+            logger.info("Stage 3: Synthesizing final answer...")
             yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
             stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results)
+            logger.info("Stage 3 complete.")
             yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
 
             # Wait for title generation if it was started
             if title_task:
-                title = await title_task
-                storage.update_conversation_title(conversation_id, title)
-                yield f"data: {json.dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
+                try:
+                    title = await title_task
+                    storage.update_conversation_title(conversation_id, title)
+                    yield f"data: {json.dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
+                except Exception as title_err:
+                    print(f"Title generation failed: {title_err}")
+                    # Don't fail the whole request for title error
 
             # Save complete assistant message
             storage.add_assistant_message(
