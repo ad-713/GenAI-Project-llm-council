@@ -1,9 +1,20 @@
 """3-stage LLM Council orchestration."""
 
 from typing import List, Dict, Any, Tuple
-from .openrouter import query_models_parallel, query_model
+from .ollama import query_models_parallel, query_model
 from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
 
+import logging
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("backend.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("backend")
 
 async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     """
@@ -18,16 +29,20 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     messages = [{"role": "user", "content": user_query}]
 
     # Query all models in parallel
+    logger.info(f"Stage 1: Querying models: {COUNCIL_MODELS}")
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
 
     # Format results
     stage1_results = []
     for model, response in responses.items():
         if response is not None:  # Only include successful responses
+            logger.info(f"Model {model} responded successfully.")
             stage1_results.append({
                 "model": model,
                 "response": response.get('content', '')
             })
+        else:
+            logger.error(f"Model {model} failed to respond.")
 
     return stage1_results
 
@@ -95,6 +110,7 @@ Now provide your evaluation and ranking:"""
     messages = [{"role": "user", "content": ranking_prompt}]
 
     # Get rankings from all council models in parallel
+    logger.info(f"Stage 2: Querying models for rankings: {COUNCIL_MODELS}")
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
 
     # Format results
@@ -103,11 +119,14 @@ Now provide your evaluation and ranking:"""
         if response is not None:
             full_text = response.get('content', '')
             parsed = parse_ranking_from_text(full_text)
+            logger.info(f"Model {model} provided ranking. Parsed: {parsed}")
             stage2_results.append({
                 "model": model,
                 "ranking": full_text,
                 "parsed_ranking": parsed
             })
+        else:
+            logger.error(f"Model {model} failed to provide ranking.")
 
     return stage2_results, label_to_model
 
@@ -159,15 +178,18 @@ Provide a clear, well-reasoned final answer that represents the council's collec
     messages = [{"role": "user", "content": chairman_prompt}]
 
     # Query the chairman model
+    logger.info(f"Querying chairman model: {CHAIRMAN_MODEL}")
     response = await query_model(CHAIRMAN_MODEL, messages)
 
     if response is None:
+        logger.error(f"Chairman model {CHAIRMAN_MODEL} failed to respond.")
         # Fallback if chairman fails
         return {
             "model": CHAIRMAN_MODEL,
             "response": "Error: Unable to generate final synthesis."
         }
 
+    logger.info(f"Chairman synthesis complete. Length: {len(response.get('content', ''))}")
     return {
         "model": CHAIRMAN_MODEL,
         "response": response.get('content', '')
@@ -274,8 +296,8 @@ Title:"""
 
     messages = [{"role": "user", "content": title_prompt}]
 
-    # Use gemini-2.5-flash for title generation (fast and cheap)
-    response = await query_model("google/gemini-2.5-flash", messages, timeout=30.0)
+    # Use llama3.2:1b for title generation (fast)
+    response = await query_model("llama3.2:1b", messages, timeout=60.0)
 
     if response is None:
         # Fallback to a generic title
