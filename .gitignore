@@ -5,6 +5,8 @@ build/
 dist/
 wheels/
 *.egg-info
+.vscode/
+backend.log
 
 # Virtual environments
 .venv
@@ -19,3 +21,6 @@ data/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+
+# Backend
+backend/tests/
