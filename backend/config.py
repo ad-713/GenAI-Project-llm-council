@@ -16,7 +16,7 @@ COUNCIL_MODELS = [
 ]
 
 # Chairman model - synthesizes final response
-CHAIRMAN_MODEL = "deepseek-r1:1.5b"
+CHAIRMAN_MODEL = "deepseek-r1:8b"
 
 # Data directory for conversation storage
 DATA_DIR = "data/conversations"

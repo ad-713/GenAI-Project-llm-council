@@ -1,50 +1,58 @@
-# LLM Council (Local Edition)
+# LLM Council (Ollama Local Edition)
 
 ![llmcouncil](header.jpg)
 
-This project is a refactor of the original LLM Council concept. Instead of relying on cloud-based models via OpenRouter, the entire system runs locally using [Ollama](https://ollama.com/). Multiple local LLMs collaborate by answering, reviewing, and synthesizing responses to a user query.
+**Author:** Adrien GREVET
+**Project Group:** CDOF3  
+**Project Base:** Fork of [karpathy/llm-council](https://github.com/karpathy/llm-council)
 
-The council consists of several models that provide initial responses and then rank each other's work. A dedicated Chairman LLM then produces the final synthesized output.
+## Project Overview
 
-## Modifications from the Original Project
+LLM Council is a collaborative multi-model system where different Large Language Models (LLMs) work together to provide high-quality answers. Instead of relying on a single model, the system leverages a "council" of models that generate initial opinions and review each other's work. A final "Chairman" model synthesizes these diverse perspectives and peer evaluations into a single, comprehensive response.
 
-- **Local Execution**: Migrated from OpenRouter (Cloud) to Ollama (Local).
-- **Custom Ollama Client**: Implemented a dedicated client in `backend/ollama.py` to handle local model requests.
-- **Setup Refactor**: Simplified the start process to work with standard Python/Conda environments, removing the strict dependency on `uv`.
+This fork migrates the original cloud-based architecture (OpenRouter) to a fully local execution environment using **Ollama**.
 
 ## How it Works
 
-1. **Stage 1: First opinions**. The user query is sent to all local council models (e.g., Qwen, Mistral, Llama).
-2. **Stage 2: Review**. Each individual LLM is given the responses of the other LLMs. Under the hood, the LLM identities are anonymized so that the LLM can't play favorites when judging their outputs. The LLM is asked to rank them in accuracy and insight.
-3. **Stage 3: Final response**. The Chairman model (e.g., DeepSeek-R1) synthesizes all responses and peer rankings into a final comprehensive answer.
+The process follows a three-stage workflow:
 
-## Prerequisites
+1.  **Stage 1: First Opinions**: The user query is sent to multiple local models (e.g., Qwen, Llama, Mistral).
+2.  **Stage 2: Peer Review**: Each model reviews the responses from Stage 1. Identities are anonymized to ensure unbiased ranking based on accuracy and insight.
+3.  **Stage 3: Synthesis**: A Chairman model (e.g., DeepSeek-R1) receives all initial responses and the peer reviews to produce the final, definitive answer.
 
-- [Ollama](https://ollama.com/) installed and running.
-- Pull the required models:
-  ```bash
-  ollama pull deepseek-r1:1.5b
-  ollama pull qwen3:4b
-  ollama pull mistral:latest
-  ollama pull llama3.2:1b
-  ```
+## Setup and Installation
 
-## Setup
+### Prerequisites
 
-### 1. Backend Setup
+*   **Ollama**: Install it from [ollama.com](https://ollama.com/).
+*   **Python 3.10+**
+*   **Node.js & npm**
 
-The project can be run in a Conda environment or using standard Python.
+### 1. Model Preparation
+
+Pull the models used in the default configuration:
 
 ```bash
-# 1. Create and activate environment
+ollama pull deepseek-r1:8b
+ollama pull qwen3:4b
+ollama pull mistral:latest
+ollama pull llama3.2:1b
+```
+
+### 2. Backend Setup
+
+It is recommended to use a virtual environment (Conda):
+
+```bash
+# Create and activate environment
 conda create -n llm-council python=3.10
 conda activate llm-council
 
-# 2. Install dependencies
-pip install fastapi uvicorn httpx python-dotenv respx pytest-asyncio
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### 2. Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 cd frontend
@@ -52,22 +60,21 @@ npm install
 cd ..
 ```
 
-### 3. Configuration
+## Running the Demo
 
-Local models are defined in `backend/config.py`. You can adjust model names or the Ollama API URL (default: `http://localhost:11434/api/chat`).
+You can run the entire application using the provided script or manually in two terminals.
 
-## Running the Application
+### Option 1: Using the Start Script
 
-**Option 1: Using the Start Script**
 ```bash
 ./start.sh
 ```
 
-**Option 2: Manual Start**
+### Option 2: Manual Execution
 
 **Terminal 1 (Backend):**
 ```bash
-# Ensure your environment is activated
+# Ensure environment is activated
 python -m backend.main
 ```
 
@@ -77,19 +84,10 @@ cd frontend
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+The application will be available at [http://localhost:5173](http://localhost:5173).
 
-## Running Tests
+## Technical Features
 
-Verify the integration with:
-```bash
-# Ensure your environment is activated
-python -m pytest backend/tests
-```
-
-## Tech Stack
-
-- **Backend:** FastAPI, Ollama (Local API), Httpx
-- **Frontend:** React + Vite, Tailwind CSS
-- **Testing:** Pytest, Respx
-- **Storage:** JSON-based conversation history
+*   **Local-First**: No API keys or cloud costs; data stays on your machine.
+*   **Parallel Processing**: Council opinions are gathered simultaneously for better performance.
+*   **Extensible**: Easily swap models in `backend/config.py`.
