@@ -86,6 +86,14 @@ npm run dev
 
 The application will be available at [http://localhost:5173](http://localhost:5173).
 
+## Benchmarking Model Strength
+
+This project can serve as a live demonstration of how model size and architecture impact performance. By using a diverse council of models, the system highlights:
+
+*   **Performance Variability**: Observe how models with different parameter counts handle the same prompt, from lightweight models to larger reasoning-optimized ones.
+*   **Reasoning Gap**: The multi-stage workflow exposes how larger models are often better equipped to identify errors (in Stage 2) and synthesize complex information (in Stage 3) compared to their smaller counterparts.
+*   **Collaborative Synergy**: See how a "Chairman" model can leverage the collective input of multiple models to produce a result that exceeds the capabilities of any single small model.
+
 ## Technical Features
 
 *   **Local-First**: No API keys or cloud costs; data stays on your machine.

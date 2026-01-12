@@ -40,3 +40,8 @@ The backend was optimized to handle multiple local model queries in parallel usi
 
 ### 4. Robust Error Handling
 Implemented better logging and error recovery in the `backend/ollama.py` client to handle common local issues, such as models not being pulled or the Ollama service being unavailable.
+
+## 5. Use of Generative AI
+Generative AI tools were used in the development and documentation of this project. **Gemini 3 Flash** and **Gemini 3 Pro** from **Google Gemini API** were utilized to assist in:
+- **Code Refactoring**: Streamlining the transition from cloud-based APIs to a local Ollama implementation and optimizing asynchronous communication patterns.
+- **Documentation Writing**: Drafting and refining technical documentation, including this report and the project's README, to ensure clarity, consistency, and professional quality.
